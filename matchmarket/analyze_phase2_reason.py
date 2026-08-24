@@ -15,6 +15,10 @@ from pathlib import Path
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# these reports use non-ASCII glyphs; Windows consoles default to cp1252 and would crash
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 HERE = Path(__file__).resolve().parent
 OFF = HERE / "data" / "phase2_ablation.jsonl"          # reasoning suppressed
 ON = HERE / "data" / "phase2_reason_ablation.jsonl"    # reasoning on

@@ -1,3 +1,30 @@
+# =============================================================================
+# Not tracked in this repo. Everything below stays on disk locally — it is
+# simply out of scope for a repo focused on the experiment engine and analysis.
+# =============================================================================
+
+# Manuscript: LaTeX source, figures, ACL style files, submission bundle, build dir
+paper/
+
+# Interactive explainer — published separately as a hosted artifact
+demo/
+
+# Design logs and the shelved study's write-ups. README.md is the only tracked doc.
+*.md
+!README.md
+
+# authority_override/ is a shelved earlier study. Only the shared API client and
+# model registry it provides are dependencies of the MatchMarket engine, so only
+# those are tracked.
+authority_override/*
+!authority_override/__init__.py
+!authority_override/client.py
+!authority_override/models.py
+
+# =============================================================================
+# Standard ignores
+# =============================================================================
+
 # Python
 __pycache__/
 *.py[cod]
@@ -6,29 +33,11 @@ __pycache__/
 venv/
 
 # API-budget bookkeeping written at run time (call/token counters, not results)
-logs/usage/
-authority_override/logs/
+logs/
 
-# LaTeX build products
-*.aux
-*.bbl
-*.blg
-*.log
-*.out
-*.synctex.gz
-*.fdb_latexmk
-*.fls
-paper/main.pdf
-
-# Submission bundle — regenerate with `python paper/make_zip.py`
-paper/overleaf_paper.zip
+# Editor / tool backups
+*.bak
 
 # OS
 .DS_Store
 Thumbs.db
-
-# LaTeX compile directory (build.ps1 stages sources here; all outputs are derived)
-paper/build/
-
-# editor / tool backups
-*.bak

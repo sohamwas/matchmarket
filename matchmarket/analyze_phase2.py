@@ -19,6 +19,10 @@ from statistics import mean
 if __package__ in (None, ""):
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+# these reports use non-ASCII glyphs; Windows consoles default to cp1252 and would crash
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 HERE = Path(__file__).resolve().parent
 P2_ABL = HERE / "data" / "phase2_ablation.jsonl"
 
