@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# API-budget bookkeeping written at run time (call/token counters, not results)
+logs/usage/
+authority_override/logs/
+
+# LaTeX build products
+*.aux
+*.bbl
+*.blg
+*.log
+*.out
+*.synctex.gz
+*.fdb_latexmk
+*.fls
+paper/main.pdf
+
+# Submission bundle — regenerate with `python paper/make_zip.py`
+paper/overleaf_paper.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# LaTeX compile directory (build.ps1 stages sources here; all outputs are derived)
+paper/build/
+
+# editor / tool backups
+*.bak
