@@ -12,7 +12,8 @@ whose accurate high claim is indistinguishable from a lie.
 
 The measuring stick makes it concrete. Believing whoever claims the highest number scores
 **6.72** out of a possible 8.0. The four models score **5.99** pooled — closer to random
-(5.0) than to that baseline.
+(5.0) than to that baseline, and significantly below it (paired Wilcoxon *p* = .002, 95% CI
+on the gap [−1.13, −0.33]).
 
 This repo holds the engine, the elicitation and selection runs, and every logged decision.
 
@@ -32,110 +33,82 @@ Every slate holds one of each type:
 | **Mid** | 5 | claims honestly, usually the lowest claim on the slate |
 | **Expert** | 8 | claims ≥ 7 — genuinely strong, indistinguishable from the liar |
 
+Positions on the slate are shuffled. Exactly one candidate maximises payoff, and choosing it
+means separating a genuinely high claim from an inflated one.
+
+### Rules
+
 **Deception is elicited, not scripted.** Candidates are language models told their true θ and
 given a real incentive: a 50% audit with a fine of 2 points per point of exaggeration. Under
-that regime inflators self-limit (modal claim 6) instead of all claiming 10 — which is exactly
-what makes "believe the highest claim" a hard baseline to beat. With costless lying every
-model claims 9–10 and the game is degenerate; that pilot is in `pilot_disclosure*.py`.
+that regime inflators self-limit (modal eligible claim 6) instead of all claiming 10 — which
+is exactly what makes "believe the highest claim" a hard baseline to beat. With costless
+lying every model claims 9–10 and the game is degenerate.
 
 **The ablation.** The same 40 slates go to every selector twice — once with claims only, once
-with a two-entry audited track record — so verification is the only variable that moves.
+with a two-entry audited track record — so verification is the only variable that moves. The
+record states past outcomes explicitly, so it is an *upper bound* on detection given clean
+evidence rather than a realistic deployment.
 
 **Scoring is arithmetic. No model grades another.** A hire is *correct* if it names the
 Expert, *deceived* if it names the Inflator, a *flight to mediocrity* if it names the Mid.
+Realized payoff is the hired candidate's true θ.
 
 ## Results
 
-| Selector | Payoff (claims only) | Detection | Flight | Deceived |
-|---|---|---|---|---|
-| Llama-3.1-8B | 6.20 | 50% | 40% | 10% |
-| Llama-3.3-70B | 6.50 | 60% | 30% | 10% |
-| Qwen3.6-27B ‡ | 5.67 | 30% | 62% | 8% |
-| GPT-OSS-120B ‡ | 5.60 | 35% | 50% | 15% |
-| **Pooled** | **5.99** | 44% | 46% | 11% |
-| *believe the highest claim* | *6.72* | *77%* | — | — |
-| *random* | *5.00* | *33%* | — | — |
+40 slates per selector per condition; each rate is a share of those 40 decisions.
 
-‡ run with extended reasoning suppressed; re-run with reasoning enabled as a de-confound.
+| Selector | Payoff (claims only) | Payoff (+ record) | Detection | Flight | Deceived |
+|---|---|---|---|---|---|
+| Llama-3.1-8B | 6.20 | 5.97 | 50% | 40% | 10% |
+| Llama-3.3-70B | 6.50 | 7.10 | 60% | 30% | 10% |
+| Qwen3.6-27B ‡ | 5.67 | 7.47 | 30% | 62% | 8% |
+| GPT-OSS-120B ‡ | 5.60 | 8.00 | 35% | 50% | 15% |
+| **Pooled** | **5.99** | **7.14** | 44% | 46% | 11% |
+| *believe the highest claim* | *6.72* | — | *77%* | *4%* | *19%* |
+| *believe the lowest claim* | *4.78* | — | *5%* | *82%* | *13%* |
+| *random* | *5.00* | — | *33%* | *33%* | *33%* |
 
-Three findings beyond the headline:
+Detection, flight and deceived columns are the claims-only condition. ‡ run with extended
+reasoning suppressed; re-run with reasoning enabled as a de-confound.
 
-1. **Verification is not an equalizer.** An audited record rescues only the selectors that
-   were at chance without it. Cross-model spread *widens*.
-2. **Reasoning is not a substitute for verification.** Enabling extended reasoning fully
+## Findings
+
+1. **The loss is mediocrity, not deception.** Every family avoids the inflator. What differs
+   is where the remaining errors go, and they go to the Mid — against the 50% that random
+   choice would put on each kind of error.
+
+2. **The naive yardstick has the mirror error profile.** "Believe the highest claim" is wrong
+   on 23% of slates, and 82% of *those* errors are deceptions. Selectors trade a gullibility
+   failure for a conservatism failure and lose payoff on the exchange: a flight costs 3 points
+   and a deception costs 6, but flights are roughly four times as frequent.
+
+3. **Verification is not an equalizer.** An audited record rescues only the selectors that
+   were at chance without it. Pooled payoff goes from 5.99 to 7.14 and deception nearly
+   vanishes (11% → 1%), but cross-model spread *widens* rather than narrowing.
+
+4. **Reasoning is not a substitute for verification.** Enabling extended reasoning fully
    rescues GPT-OSS (5.60 → 6.88, reaching parity with the naive baseline) and does nothing
-   for Qwen3.6 (5.67 → 5.30).
-3. **It isn't middle-option bias.** The Mid is the *lowest* claimer in 88% of slates, so
+   for Qwen3.6 (5.67 → 5.30). With a record, both reach 100% detection — so their reasoning
+   works; what deliberation can't do is talk a model back into trusting a high claim when
+   there's no evidence.
+
+5. **It isn't middle-option bias.** The Mid is the *lowest* claimer in 88% of slates, so
    selectors move toward an extreme rather than compromising.
 
-## Layout
-
-```
-matchmarket/
-  study_ablation.py     shared prompts, parsers, and the audit-record template
-  phase2.py             main run — builds the candidate pool, samples 40 slates,
-                        queries 4 selectors x 2 information conditions
-  phase2_reason.py      reasoning de-confound: re-runs the two suppressed models
-  phase2_fix.py         re-collection of the with-record arm after the record-keying fix
-  backfill_gptoss.py    tops a short cell back up to n=40
-  pilot_*.py            earlier designs: costless lying, disclosure, matched pairs
-  analyze_*.py          rates and Wilson 95% CIs per run
-  data/*.jsonl          every logged decision
-
-authority_override/
-  client.py             rate-limited, resumable OpenAI-compatible client (shared)
-  models.py             model registry: endpoint, provider, reasoning setting
-```
-
-## Running the analysis
-
-No network needed — everything reads the committed logs:
-
-```bash
-py -m matchmarket.analyze_phase2          # main ablation: flight, detection, verification gap
-py -m matchmarket.analyze_phase2_reason   # reasoning de-confound, same 40 slates
-py -m matchmarket.analyze_ablation        # earlier pilot ablation
-py -m matchmarket.analyze_matched         # matched deceiver x detector pilot
-```
-
-> **Read this before quoting a with-record number.** `analyze_phase2.py` and
-> `analyze_phase2_reason.py` read `phase2_ablation.jsonl` for the with-record arm. That arm
-> was later re-collected because the audit history had been keyed to the gap between a
-> candidate's claim and its true competence rather than to its role, which mislabelled a few
-> honest candidates as inflators. **`phase2_ablation_fixed.jsonl` and
-> `phase2_reason_fixed.jsonl` supersede it** — those are the authoritative with-record logs.
-> The scripts above are unchanged from the original run, so their with-record column reports
-> the pre-correction values (e.g. Llama-3.1-8B 55% rather than the corrected 38%). The
-> no-record arm was never affected.
-
-## Reproducing the runs
-
-Re-running the experiment needs API access. Models were served through free public endpoints
-at temperature 0.7:
-
-| Endpoint | Provider | Reasoning |
-|---|---|---|
-| `llama-3.1-8b-instant` | Groq | — |
-| `llama-3.3-70b-versatile` | Groq | — |
-| `qwen/qwen3.6-27b` | Groq | `none` (suppressed) |
-| `gpt-oss-120b` | Cerebras | `low` (suppressed) |
-
-```bash
-py -m matchmarket.phase2          # resumable; skips cells already in data/
-py -m matchmarket.phase2_reason
-```
-
-`authority_override/client.py` loads API keys from a sibling checkout — set `GOALDRIFT_HOME`
-to point at your own, or swap the module for any OpenAI-compatible `chat()` client. Keys are
-never read from or written to this repo.
-
-A fifth model, `qwen3-32b`, was in the original panel and was decommissioned by its provider
-partway through collection; `qwen3.6-27b` is the live successor and the only Qwen model
-reported.
-
-## Scope
+## Caveats
 
 Four open models from three families, one one-shot game, three candidates, 40 slates, a
-single decision sample per cell at temperature 0.7. The finding is that selectors fail to
-exploit claims that *are* partly informative — which holds only under an enforcement regime
-that makes liars self-limit. Under costless lying the naive baseline collapses too.
+single decision sample per cell at temperature 0.7. Three limits are worth stating plainly:
+
+- **Flight is confounded with claim magnitude.** Because the Mid is usually also the lowest
+  claimer, "flees to the Mid" and "picks the lowest claim" are not separable in this data. A
+  claim-matched slate, where the Mid advertises as loudly as the Expert, would separate them.
+- **The gap depends on the competence spread.** Re-pricing the same decisions with the Mid at
+  θ = 7 instead of 5 lets three of four selectors overtake the naive baseline. The finding is
+  about markets with a real quality spread, not a universal property of LLM selection.
+- **Selectors are warned.** The client prompt says agents may inflate their claims, so some
+  of the observed skepticism is induced by construction.
+
+The headline finding is that selectors fail to exploit claims that *are* partly informative —
+which holds only under an enforcement regime that makes liars self-limit. Under costless
+lying the naive baseline collapses too.
